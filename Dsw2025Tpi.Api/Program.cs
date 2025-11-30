@@ -2,6 +2,9 @@ using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Data;
 using Dsw2025Tpi.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Dsw2025Tpi.Api;
 
@@ -19,15 +22,35 @@ public class Program
 
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
             options.UseSqlServer(
-                builder.Configuration.GetConnectionString("DefaultConnection"),
+                builder.Configuration.GetConnectionString("Dsw2025TpiDb"),
                 sqlOptions => sqlOptions.EnableRetryOnFailure()
             ));
 
-        // Servicios originales
+
+
         builder.Services.AddScoped<IRepository, EfRepository>();
         builder.Services.AddTransient<ProductsManagementService>();
         builder.Services.AddTransient<CustomerManagementService>();
         builder.Services.AddTransient<OrderManagementService>();
+        builder.Services.AddTransient<AuthManagementService>();
+
+        // 👉 Autenticación JWT
+        builder.Services.AddAuthentication("Bearer")
+            .AddJwtBearer("Bearer", options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                    ValidAudience = builder.Configuration["Jwt:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+                };
+            });
+
 
         var app = builder.Build();
 
@@ -39,6 +62,7 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();

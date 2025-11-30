@@ -1,113 +1,118 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Dsw2025Tpi.Domain.Entities;
-using Microsoft.Identity.Client;
-namespace Dsw2025Tpi.Data;
 
-public class Dsw2025TpiContext : DbContext
+
+namespace Dsw2025Tpi.Data
 {
-    public DbSet<Product> Products { get; set; }
-    public DbSet<Customer> Customers { get; set; }
-    public DbSet<Order> Orders { get; set; }
-    public DbSet<OrderItem> OrderItems { get; set; }
-
-    public Dsw2025TpiContext(DbContextOptions<Dsw2025TpiContext> options) : base(options)
+    public class Dsw2025TpiContext : DbContext
     {
+        public DbSet<Product> Products { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<User> Users { get; set; }
 
-    }
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
+        public Dsw2025TpiContext(DbContextOptions<Dsw2025TpiContext> options) : base(options) { }
 
-
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<Product>(b =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            b.HasKey(p => p.Id);
+            base.OnModelCreating(modelBuilder);
 
-            b.Property(p => p.Sku)
-             .IsRequired()
-             .HasMaxLength(50);
-            b.HasIndex(p => p.Sku)
-             .IsUnique();
+            // PRODUCT
+            modelBuilder.Entity<Product>(b =>
+            {
+                b.HasKey(p => p.Id);
 
-            b.Property(p => p.InternalCode)                
-            .IsRequired()
-            .HasMaxLength(50);
+                b.Property(p => p.Sku)
+                 .IsRequired()
+                 .HasMaxLength(50);
+                b.HasIndex(p => p.Sku)
+                 .IsUnique();
 
-            b.Property(p => p.Name)
-             .IsRequired()
-             .HasMaxLength(100);
+                b.Property(p => p.InternalCode)
+                 .IsRequired()
+                 .HasMaxLength(50);
 
-            b.Property(p => p.currentUnitPrice)
-             .IsRequired()
-             .HasColumnType("decimal(18,2)");
+                b.Property(p => p.Name)
+                 .IsRequired()
+                 .HasMaxLength(100);
 
-            b.Property(p => p.stockQuantity)
-             .IsRequired();
+                b.Property(p => p.currentUnitPrice)
+                 .IsRequired()
+                 .HasColumnType("decimal(18,2)");
 
-            b.Property(p => p.IsActive)
-             .IsRequired();
-        });
+                b.Property(p => p.stockQuantity)
+                 .IsRequired();
 
-        modelBuilder.Entity<Customer>(b =>
-        {
-            b.HasKey(c => c.Id);
-            b.Property(c => c.Name)
-             .IsRequired()
-             .HasMaxLength(100);
-            b.Property(c => c.Email)
-             .IsRequired()
-             .HasMaxLength(150);
-        });
-        modelBuilder.Entity<Order>(b =>
-        {
-            b.HasKey(o => o.Id);
+                b.Property(p => p.IsActive)
+                 .IsRequired();
+            });
 
-            b.Property(o => o.CustomerId)
-             .IsRequired();
+            // CUSTOMER
+            modelBuilder.Entity<Customer>(b =>
+            {
+                b.HasKey(c => c.Id);
+                b.Property(c => c.Name).IsRequired().HasMaxLength(100);
+                b.Property(c => c.Email).IsRequired().HasMaxLength(150);
+            });
 
-            b.Property(o => o.Date)
-             .IsRequired();
+            // ORDER
+            modelBuilder.Entity<Order>(b =>
+            {
+                b.HasKey(o => o.Id);
 
-            b.Property(o => o.ShippingAddress)
-             .IsRequired()
-             .HasMaxLength(250);
+                b.Property(o => o.CustomerId).IsRequired();
+                b.Property(o => o.Date).IsRequired();
+                b.Property(o => o.ShippingAddress).IsRequired().HasMaxLength(250);
+                b.Property(o => o.BillingAddress).IsRequired().HasMaxLength(250);
+                b.Property(o => o.Notes).HasMaxLength(500);
 
-            b.Property(o => o.BillingAddress)
-             .IsRequired()
-             .HasMaxLength(250);
+                b.Property(o => o.Status)
+                 .HasConversion<string>()
+                 .IsRequired();
 
-            b.Property(o => o.Notes)
-             .HasMaxLength(500);
+                b.HasMany(o => o.Items)
+                 .WithOne(oi => oi.Order)
+                 .HasForeignKey(oi => oi.OrderId)
+                 .OnDelete(DeleteBehavior.Cascade);
 
-            b.Property(o => o.Status)
-             .HasConversion<string>()
-             .IsRequired();
+                b.ToTable("Orders");
+            });
 
-            b.HasMany(o => o.Items)
-             .WithOne(oi => oi.Order)
-             .HasForeignKey(oi => oi.OrderId)
-             .OnDelete(DeleteBehavior.Cascade);
+            // ORDER ITEM
+            modelBuilder.Entity<OrderItem>(b =>
+            {
+                b.HasKey(oi => oi.Id);
+                b.Property(oi => oi.ProductId).IsRequired();
+                b.Property(oi => oi.Quantity).IsRequired();
+                b.Property(oi => oi.UnitPrice)
+                 .IsRequired()
+                 .HasColumnType("decimal(18,2)");
+                b.Ignore(oi => oi.Subtotal);
 
-            b.ToTable("Orders");
-        });
-        modelBuilder.Entity<OrderItem>(b =>
-        {
-            b.HasKey(oi => oi.Id);
+                b.ToTable("OrderItems");
+            });
 
-            b.Property(oi => oi.ProductId)
-             .IsRequired();
+            // USER (faltaba)
+            modelBuilder.Entity<User>(b =>
+            {
+                b.HasKey(u => u.Id);
 
-            b.Property(oi => oi.Quantity)
-             .IsRequired();
+                b.Property(u => u.Username)
+                 .IsRequired()
+                 .HasMaxLength(100);
 
-            b.Property(oi => oi.UnitPrice)
-             .IsRequired()
-             .HasColumnType("decimal(18,2)");
+                b.HasIndex(u => u.Username)
+                 .IsUnique();
 
-            b.Ignore(oi => oi.Subtotal);
+                b.Property(u => u.Password)
+                 .IsRequired()
+                 .HasMaxLength(200);
 
-            b.ToTable("OrderItems");
-        });
+                b.Property(u => u.Role)
+                 .IsRequired()
+                 .HasMaxLength(20);
+            });
+        }
     }
 }

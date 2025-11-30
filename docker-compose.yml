@@ -3,6 +3,7 @@ version: '3.9'
 services:
   dsw-sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     container_name: dsw-sql
     environment:
       SA_PASSWORD: "YourStrong!Passw0rd"
@@ -18,12 +19,15 @@ services:
       dockerfile: Dockerfile
     container_name: dsw-api
     ports:
-      - "5080:8080"   # Puerto externo 5080 → interno 8080
+      - "5080:8080"
     depends_on:
       - dsw-sql
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development 
-      - ConnectionStrings__DefaultConnection=Server=dsw-sql;Database=Dsw2025TpiDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Dsw2025TpiDb=Server=dsw-sql,1433;Database=Dsw2025TpiDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+      - Jwt__Key=EstaEsUnaClaveSuperSecretaDeJWT12345
+      - Jwt__Issuer=Dsw2025Tpi
+      - Jwt__Audience=Dsw2025TpiUsers
 
 volumes:
   sql_data:

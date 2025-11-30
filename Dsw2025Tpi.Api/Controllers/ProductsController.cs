@@ -1,5 +1,6 @@
 ﻿using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -86,5 +87,17 @@ public class ProductsController : ControllerBase
         p.Disable();
         await _servi.Elimi(p);
         return NoContent();
+    }
+    [HttpGet("admin")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetProductsAdmin([FromQuery] FilterProduct request)
+    {
+        var products = await _servi.GetProducts(request);
+        if(products == null)
+        {
+            Response.Headers.Append("X-Message", "There are no active products");
+            return NoContent();
+        }
+        return Ok(products);
     }
 }

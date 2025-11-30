@@ -1,6 +1,9 @@
-﻿using Dsw2025Tpi.Application.Dtos;
+﻿using System.Reflection;
+using System.Windows.Markup;
+using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Domain.Entities;
 using Dsw2025Tpi.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Dsw2025Tpi.Application.Services
 {
@@ -8,10 +11,11 @@ namespace Dsw2025Tpi.Application.Services
     public class ProductsManagementService
     {
         private readonly IRepository _repo;
-
-        public ProductsManagementService(IRepository repo)
+        private readonly ILogger<ProductsManagementService> _logger;
+        public ProductsManagementService(IRepository repo, ILogger<ProductsManagementService> logger)
         {
             _repo = repo;
+            _logger = logger;
         }
 
         //Ferchoooo
@@ -87,6 +91,38 @@ namespace Dsw2025Tpi.Application.Services
         {
             p.Disable();
             await _repo.Update<Product>(p);
+        }
+        public async Task<ResponsePagination?> GetProducts(FilterProduct request)
+        {
+            var isActive = request.Status == "enabled" 
+            ? (bool?)true 
+            : request.Status == "disabled" 
+                ? (bool?)false
+                : null;
+
+            _logger.LogInformation("Consulta de Productos");
+
+            var activeProducts = await _repo.GetFiltered<Product>(p => (
+                isActive == null || p.IsActive == isActive) 
+                && (string.IsNullOrEmpty(request.Search) || p.Name.Contains(request.Search))
+            );
+            if (activeProducts is null || !activeProducts.Any())
+            throw new Exception("No products were found");
+
+            var products = activeProducts.Select(p => new ProductResponse(
+                p.Id,
+                p.Sku,
+                p.InternalCode,
+                p.Name,
+                p.Description,
+                p.currentUnitPrice,
+                p.stockQuantity,
+                p.IsActive))
+                .OrderBy(p => p.Sku)
+                .Skip((request.PageNumber -1) * request.PageSize ?? 0)
+                .Take(request.PageSize ?? activeProducts.Count());
+
+            return new ResponsePagination(products.ToList(), activeProducts.Count());
         }
     }
 }
