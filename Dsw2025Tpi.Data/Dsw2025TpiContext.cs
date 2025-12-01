@@ -93,26 +93,34 @@ namespace Dsw2025Tpi.Data
                 b.ToTable("OrderItems");
             });
 
-            // USER (faltaba)
+            // USER
             modelBuilder.Entity<User>(b =>
             {
                 b.HasKey(u => u.Id);
 
                 b.Property(u => u.Username)
-                 .IsRequired()
-                 .HasMaxLength(100);
+                .IsRequired()
+                .HasMaxLength(100);
 
                 b.HasIndex(u => u.Username)
-                 .IsUnique();
+                .IsUnique();
+
+                b.Property(u => u.Email)
+                .IsRequired()
+                .HasMaxLength(150);
+
+                b.HasIndex(u => u.Email)
+                .IsUnique();
 
                 b.Property(u => u.Password)
-                 .IsRequired()
-                 .HasMaxLength(200);
+                .IsRequired()
+                .HasMaxLength(200);
 
                 b.Property(u => u.Role)
-                 .IsRequired()
-                 .HasMaxLength(20);
+                .IsRequired()
+                .HasMaxLength(20);
             });
+
         }
     }
 }

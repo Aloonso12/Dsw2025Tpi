@@ -21,7 +21,7 @@ namespace Dsw2025Tpi.Application.Services
         }
 
         // =============================
-        // LOGIN
+        // LOGIN (texto plano)
         // =============================
         public async Task<LoginResponse> LoginAsync(LoginRequest dto)
         {
@@ -29,18 +29,92 @@ namespace Dsw2025Tpi.Application.Services
                 string.IsNullOrWhiteSpace(dto.Password))
                 throw new ArgumentException("Credenciales inválidas");
 
-            var users = await _repo.GetAll<User>();
-            var user = users?.FirstOrDefault(u => u.Username == dto.Username);
+            var user = await _repo.First<User>(u => u.Username == dto.Username);
 
             if (user == null)
-                throw new KeyNotFoundException("Usuario no encontrado");
+                throw new UnauthorizedAccessException("Usuario o contraseña incorrectos");
 
             if (user.Password != dto.Password)
-                throw new UnauthorizedAccessException("Contraseña incorrecta");
+                throw new UnauthorizedAccessException("Usuario o contraseña incorrectos");
 
             string token = GenerateToken(user);
 
-            return new LoginResponse(user.Id, user.Username, user.Role, token);
+            return new LoginResponse(
+                user.Id,
+                user.Username,
+                user.Role,
+                token
+            );
+        }
+
+        // =============================
+        // REGISTER (texto plano)
+        // =============================
+        public async Task<RegisterResponse> RegisterAsync(RegisterRequest dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Username) ||
+                string.IsNullOrWhiteSpace(dto.Email) ||
+                string.IsNullOrWhiteSpace(dto.Password))
+                throw new ArgumentException("Usuario, email y contraseña son obligatorios");
+
+            if (dto.Role != "Admin" && dto.Role != "User")
+                throw new ArgumentException("El rol debe ser 'Admin' o 'User'");
+
+            // username único
+            var existing = await _repo.First<User>(u => u.Username == dto.Username);
+            if (existing != null)
+                throw new ArgumentException("El nombre de usuario ya existe");
+
+            // email único
+            var emailUsed = await _repo.First<User>(u => u.Email == dto.Email);
+            if (emailUsed != null)
+                throw new ArgumentException("El email ya está registrado");
+
+            var user = new User(
+                dto.Username,
+                dto.Email,
+                dto.Password,    // ← TEXTO PLANO
+                dto.Role
+            );
+
+            await _repo.Add(user);
+
+            return new RegisterResponse(
+                user.Id,
+                user.Username,
+                user.Email,
+                user.Role
+            );
+        }
+
+        // =============================
+        // JWT
+        // =============================
+        private string GenerateToken(User user)
+        {
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+            var creds = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256
+            );
+
+            var claims = new[]
+            {
+                new Claim("id", user.Id.ToString()),
+                new Claim("username", user.Username),
+                new Claim("email", user.Email),
+                new Claim(ClaimTypes.Role, user.Role),
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(2),
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // =============================
@@ -50,12 +124,9 @@ namespace Dsw2025Tpi.Application.Services
         {
             var users = await _repo.GetAll<User>();
 
-            if (users == null)
-                return new List<UserResponse>();
-
-            return users.Select(u =>
-                new UserResponse(u.Id, u.Username, u.Role)
-            );
+            return users?.Select(u =>
+                new UserResponse(u.Id, u.Username, u.Email, u.Role)
+            ) ?? new List<UserResponse>();
         }
 
         // =============================
@@ -68,55 +139,12 @@ namespace Dsw2025Tpi.Application.Services
             if (u == null)
                 throw new KeyNotFoundException("Usuario no encontrado");
 
-            return new UserResponse(u.Id, u.Username, u.Role);
-        }
-
-        // =============================
-        // REGISTER
-        // =============================
-        public async Task<RegisterResponse> RegisterAsync(RegisterRequest dto)
-        {
-            if (string.IsNullOrWhiteSpace(dto.Username) ||
-                string.IsNullOrWhiteSpace(dto.Password))
-                throw new ArgumentException("El usuario y contraseña son obligatorios");
-
-            if (dto.Role != "Admin" && dto.Role != "User")
-                throw new ArgumentException("El rol debe ser 'Admin' o 'User'");
-
-            var existing = await _repo.First<User>(u => u.Username == dto.Username);
-            if (existing != null)
-                throw new ArgumentException("El nombre de usuario ya existe");
-
-            var user = new User(dto.Username, dto.Password, dto.Role);
-            await _repo.Add<User>(user);
-
-            return new RegisterResponse(user.Id, user.Username, user.Role);
-        }
-
-        // =============================
-        // TOKEN GENERATION
-        // =============================
-        private string GenerateToken(User user)
-        {
-            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
-            var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
-            {
-                new Claim("id", user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.Role)
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: creds
+            return new UserResponse(
+                u.Id,
+                u.Username,
+                u.Email,
+                u.Role
             );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

@@ -20,13 +20,28 @@ public class Program
         builder.Services.AddSwaggerGen();
         builder.Services.AddHealthChecks();
 
+        // 👉 CORS
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend",
+                policy =>
+                {
+                    policy
+                        .WithOrigins(
+                            "http://localhost:5173",   // Vite dev
+                            "http://localhost:5080"    // Docker API via Vite proxy
+                        )
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+        });
+
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
             options.UseSqlServer(
                 builder.Configuration.GetConnectionString("Dsw2025TpiDb"),
                 sqlOptions => sqlOptions.EnableRetryOnFailure()
             ));
-
-
 
         builder.Services.AddScoped<IRepository, EfRepository>();
         builder.Services.AddTransient<ProductsManagementService>();
@@ -51,7 +66,6 @@ public class Program
                 };
             });
 
-
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment())
@@ -61,6 +75,9 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        // 👉 ACTIVAR CORS ANTES DE AUTH
+        app.UseCors("AllowFrontend");
 
         app.UseAuthentication();
         app.UseAuthorization();

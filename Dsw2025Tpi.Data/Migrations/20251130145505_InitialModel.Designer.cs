@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Dsw2025Tpi.Data.Migrations
 {
     [DbContext(typeof(Dsw2025TpiContext))]
-    [Migration("20251129234827_InitialModel")]
+    [Migration("20251130145505_InitialModel")]
     partial class InitialModel
     {
         /// <inheritdoc />
@@ -159,6 +159,11 @@ namespace Dsw2025Tpi.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -175,6 +180,9 @@ namespace Dsw2025Tpi.Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("Username")
                         .IsUnique();

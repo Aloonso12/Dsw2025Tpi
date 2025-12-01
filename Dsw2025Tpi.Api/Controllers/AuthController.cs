@@ -19,7 +19,7 @@ namespace Dsw2025Tpi.Api.Controllers
         // LOGIN
         // =============================
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginRequest dto)
+        public async Task<IActionResult> Login([FromBody] LoginRequest dto)
         {
             try
             {
@@ -38,9 +38,13 @@ namespace Dsw2025Tpi.Api.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Error interno del servidor" });
+                Console.WriteLine("🔥 ERROR LOGIN");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+
+                return StatusCode(500, new { message = ex.Message });
             }
         }
 
@@ -48,7 +52,7 @@ namespace Dsw2025Tpi.Api.Controllers
         // REGISTER
         // =============================
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterRequest dto)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest dto)
         {
             try
             {
