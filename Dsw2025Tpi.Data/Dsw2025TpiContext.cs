@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Dsw2025Tpi.Domain.Entities;
 
-
 namespace Dsw2025Tpi.Data
 {
     public class Dsw2025TpiContext : DbContext
@@ -61,16 +60,23 @@ namespace Dsw2025Tpi.Data
             {
                 b.HasKey(o => o.Id);
 
-                b.Property(o => o.CustomerId).IsRequired();
+                // 🔥 CAMBIO IMPORTANTE: UserId reemplaza CustomerId
+                b.Property(o => o.UserId).IsRequired();
+
                 b.Property(o => o.Date).IsRequired();
                 b.Property(o => o.ShippingAddress).IsRequired().HasMaxLength(250);
                 b.Property(o => o.BillingAddress).IsRequired().HasMaxLength(250);
                 b.Property(o => o.Notes).HasMaxLength(500);
 
                 b.Property(o => o.Status)
-                 .HasConversion<string>()
                  .IsRequired();
 
+                // 🔥 RELACIÓN CORRECTA CON User
+                b.HasOne<User>()
+                 .WithMany()
+                 .HasForeignKey(o => o.UserId);
+
+                // Items
                 b.HasMany(o => o.Items)
                  .WithOne(oi => oi.Order)
                  .HasForeignKey(oi => oi.OrderId)
@@ -120,7 +126,6 @@ namespace Dsw2025Tpi.Data
                 .IsRequired()
                 .HasMaxLength(20);
             });
-
         }
     }
 }

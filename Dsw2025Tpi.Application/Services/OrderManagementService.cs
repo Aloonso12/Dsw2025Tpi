@@ -11,10 +11,10 @@ namespace Dsw2025Tpi.Application.Services
 
         public async Task<OrderResponse> CreateOrder(CreateOrderRequest dto)
         {
-            var customer = await _repo.GetById<Customer>(dto.CustomerId)
+            var user = await _repo.GetById<User>(dto.UserId)
                 ?? throw new ArgumentException("Cliente no encontrado");
 
-            var order = new Order(dto.CustomerId, dto.ShippingAddress, dto.BillingAddress);
+            var order = new Order(dto.UserId, dto.ShippingAddress, dto.BillingAddress);
 
             foreach (var itemDto in dto.OrderItems)
             {
@@ -43,13 +43,25 @@ namespace Dsw2025Tpi.Application.Services
             return orders.Select(Map);
         }
 
+        public async Task<OrderResponse> UpdateOrderStatus(Guid orderId, UpdateOrderStatusRequest dto)
+        {
+            var order = await _repo.GetById<Order>(orderId, "Items")
+                ?? throw new ArgumentException("Orden no encontrada");
+
+            order.UpdateStatus(dto.Status);
+            var updatedOrder = await _repo.Update<Order>(order);
+            
+            return Map(updatedOrder);
+        }
+
         private static OrderResponse Map(Order o) => new(
             o.Id,
-            o.CustomerId,
+            o.UserId,
             o.Date,
             o.ShippingAddress,
             o.BillingAddress,
             o.Notes,
+            o.Status,
             o.TotalAmount,
             o.Items.Select(i => new OrderItemResponse(
                 i.ProductId,

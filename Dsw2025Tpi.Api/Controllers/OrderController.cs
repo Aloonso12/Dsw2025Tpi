@@ -47,5 +47,27 @@ namespace Dsw2025Tpi.Api.Controllers
         {
             return Ok(await _serv.GetAllOrders());
         }
+
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateOrderStatusRequest dto)
+        {
+            try
+            {
+                var resp = await _serv.UpdateOrderStatus(id, dto);
+                return Ok(resp);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                return Problem(
+                    title: "Error interno al actualizar el estado",
+                    detail: detail
+                );
+            }
+        }
     }
 }
